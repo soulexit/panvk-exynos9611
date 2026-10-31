@@ -208,3 +208,10 @@ Symptom:     the three features were reported unsupported on Mali-G72 (Valhall o
 Validation:  dEQP-VK.descriptor_indexing 93 pass / 22 not supported / 0 fail; no regression over
              1,000 binding_model and previously passing cases
 ```
+
+### 0019 — PANVK_FPS statistics
+
+```text
+Purpose:     opt-in frames/s, submits/s and CPU wait time in logcat every 5 s
+Validation:  Winlator AIO test, numbers match the app's own FPS counter (≈250 vs 257)
+```

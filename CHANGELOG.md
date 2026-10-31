@@ -3,6 +3,17 @@
 Driver versions: `0.01`, `0.02`, … The archived app repositories numbered their packages
 separately (ARMSX2 0.05 wrapped driver 0.04); from 0.05 there is one number.
 
+## 0.06 (testing) — 2026-11-01
+
+- **`PANVK_FPS=1`** (patch 0019): every 5 s the driver logs frames/s, submits/s and the CPU
+  time spent blocked in waits (`adb logcat | grep "panvk fps"`). Works in Winlator, where the
+  driver never sees a present (Winlator's wrapper has its own X11 presentation).
+- **Winlator guide**: recommended settings — BCn emulation **None** (on *auto* the wrapper
+  decodes all BC textures on the CPU for PanVK), mailbox, sync frame off, Box64 Performance —
+  and first AIO Graphics Test numbers: D3D9 and D3D11 cubes both 600–700 FPS in their own
+  window.
+- Driver otherwise identical to 0.05.
+
 ## 0.05 (testing) — 2026-10-31
 
 - **One repository and one zip** for Winlator, Eden, Termux, plus the same driver named for

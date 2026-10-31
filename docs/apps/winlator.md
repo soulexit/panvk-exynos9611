@@ -2,6 +2,31 @@
 
 Use `panvk-g72-exynos9611-<version>.zip`. Tested with `com.winlator.cmod` 4.1.
 
+## Recommended settings
+
+In the container (or the shortcut's own settings):
+
+| Setting | Value | Why |
+|---|---|---|
+| Graphics driver | `PanVK-G72-Exynos9611-<version>` | |
+| **BCn emulation** | **None** | On *auto* Winlator's wrapper decodes every BC texture on the CPU for PanVK, although the Mali-G72 path samples BC itself: slower, more memory, and wrong copies |
+| Present mode | mailbox (default) | *immediate* makes Winlator use a one-image swapchain |
+| Sync frame | off | on, the wrapper waits for the GPU to go idle at every present |
+| Use DRI3 | on (default) | off, presents go through CPU copies with a full wait each |
+| Box64 preset | **Performance** | D3D9 AIO test: 12 FPS on Compatibility, 60+ on Performance (Box64's memory barriers, not the driver) |
+| DXVK | 1.10.3, 2.4.1, 2.7.1 gplasync tested by the sister project; 2.4.1 measured here | |
+
+Measuring FPS without the on-screen HUD: put `PANVK_FPS=1` in the container's environment
+variables and read `panvk fps:` lines from `adb logcat` (frames/s, submits/s, CPU wait time).
+
+## Measured (driver 0.06, AIO Graphics Test 2.1.0, 64-bit, DXVK 2.4.1, Box64 Performance)
+
+| Test | FPS |
+|---|---|
+| AIO main window, Direct3D 11 cube | ~250 |
+| `--cube dx11` (standalone window) | 460–610 |
+| `--cube dx9` (standalone window) | 620–700 |
+
 ## Install
 
 ### Option A — import the zip in Winlator (no root, recommended)
