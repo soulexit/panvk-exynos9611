@@ -47,6 +47,8 @@ Driver options (environment switches) go in a `panvk.env` file next to the drive
 | App | Game / test | Driver | Result |
 |---|---|---|---|
 | Eden | Zelda: Echoes of Wisdom (in-game) | 0.04 | 6.2–6.9 FPS, no GPU fault (0.03: 5.9–7.5) |
+| Winlator | AIO Graphics Test D3D11 cube, DXVK 2.7.1 | 0.07 | 460–490 FPS (DXVK 2.5+ didn't start before 0.07) |
+| Winlator | AIO Graphics Test D3D9 / D3D11 cubes, DXVK 1.10.3 / 2.4.1 | 0.06 | 550–790 FPS |
 | Winlator | NFS Most Wanted (DXVK D3D9) | 0.02 | intro/title/menus at 50–60 FPS |
 | ARMSX2 | Kingdom Hearts | 0.02 | at parity with 0.01 |
 | Termux | Khronos Vulkan CTS 1.4.7.1, 89,530 sampled cases | 0.04 | 33,218 pass, 100 fail, 0 driver crash ([docs/CTS-RESULTS.md](docs/CTS-RESULTS.md)) |

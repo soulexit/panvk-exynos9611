@@ -215,3 +215,20 @@ Validation:  dEQP-VK.descriptor_indexing 93 pass / 22 not supported / 0 fail; no
 Purpose:     opt-in frames/s, submits/s and CPU wait time in logcat every 5 s
 Validation:  Winlator AIO test, numbers match the app's own FPS counter (≈250 vs 257)
 ```
+
+### 0020 — Vertex pulling without vertex buffers (from panvk-kirin990 edd369f)
+
+```text
+Symptom:     DXVK 2.7: JOB_READ_FAULT, the draw kept a stale attribute table
+Validation:  AIO D3D11 cube with DXVK 2.7.1, no GPU fault
+```
+
+### 0021 — descriptorIndexing on Bifrost; multi-workgroup descriptor copies
+
+```text
+Purpose:     report descriptorIndexing and update-after-bind for all types; descriptor copy job
+             in workgroups of ≤64 threads
+Symptom:     DXVK 2.5+ skipped the GPU; with the feature, DATA_INVALID_FAULT on big arrays
+Validation:  DXVK 2.7.1 AIO cube 460-490 FPS, 0 faults; CTS descriptor_indexing 2 known fails;
+             1,500 binding_model + 400 smoke cases pass
+```

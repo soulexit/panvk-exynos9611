@@ -1,0 +1,116 @@
+From 1c4682705dcb5d9714bedf11e2bd990d691770cb Mon Sep 17 00:00:00 2001
+From: soulexit <metehan.tanriverdi01@gmail.com>
+Date: Sun, 1 Nov 2026 01:26:45 +0300
+Subject: [PATCH 21/21] panvk/bifrost: descriptorIndexing; descriptor copies
+ over several workgroups
+
+Report descriptorIndexing and update-after-bind for every descriptor type
+on v6/v7 (DXVK 2.5 and later require it and skipped the GPU without it).
+Update-after-bind sets already go through the execution-time descriptor
+copy job. That job ran one workgroup of one thread per descriptor, which
+the large arrays descriptor indexing allows overflow (DATA_INVALID_FAULT):
+it now runs workgroups of at most 64 threads and the shader skips the
+threads past the count.
+
+DXVK 2.7.1 gplasync in Winlator: AIO D3D11 cube 460-490 FPS (did not start
+before). CTS descriptor_indexing: 2 failures left (uniform texel buffer,
+update-after-bind, in a loop, vertex shader).
+
+Assisted-by: LLM
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../vulkan/bifrost/panvk_vX_meta_desc_copy.c  | 22 ++++++++++++-------
+ .../vulkan/panvk_vX_physical_device.c         | 14 ++++++------
+ 2 files changed, 21 insertions(+), 15 deletions(-)
+
+diff --git a/src/panfrost/vulkan/bifrost/panvk_vX_meta_desc_copy.c b/src/panfrost/vulkan/bifrost/panvk_vX_meta_desc_copy.c
+index 4bbdcb4..bce3d91 100644
+--- a/src/panfrost/vulkan/bifrost/panvk_vX_meta_desc_copy.c
++++ b/src/panfrost/vulkan/bifrost/panvk_vX_meta_desc_copy.c
+@@ -442,9 +442,13 @@ panvk_meta_desc_copy_rsd(struct panvk_device *dev)
+    b.shader->info.workgroup_size[1] = 1;
+    b.shader->info.workgroup_size[2] = 1;
+ 
++   /* The job rounds the descriptor count up to whole workgroups. */
+    nir_def *desc_copy_id =
+       nir_channel(&b, nir_load_global_invocation_id(&b, 32), 0);
++   nir_push_if(&b, nir_ult(&b, desc_copy_id,
++                           get_input_field(&b, desc_copy.limits[PANVK_BIFROST_DESC_TABLE_COUNT - 1])));
+    single_desc_copy(&b, desc_copy_id);
++   nir_pop_if(&b, NULL);
+    PAN_NIR_SET_BLAKE3_INTERNAL(b.shader, &key);
+ 
+    struct pan_compile_inputs inputs = {
+@@ -564,19 +568,21 @@ panvk_per_arch(meta_get_copy_desc_job)(
+    if (!job_desc->gpu)
+       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+ 
+-   /* Given the per-stage max descriptors limit, we should never
+-    * reach the workgroup dimension limit. */
+-   uint32_t copy_count =
++   /* One thread per descriptor, in workgroups of at most 64: update-after-bind arrays
++    * (descriptorIndexing) can hold thousands of descriptors, more than one workgroup may have
++    * threads, and a workgroup that big makes the job DATA_INVALID. The shader skips the
++    * threads past the count. */
++   const uint32_t copy_count =
+       copy_info.desc_copy.limits[PANVK_BIFROST_DESC_TABLE_COUNT - 1];
+-
+-   assert(copy_count - 1 < BITFIELD_MASK(10));
++   const uint32_t wg_size = CLAMP(copy_count, 1, 64);
++   const uint32_t wg_count = DIV_ROUND_UP(copy_count, wg_size);
+ 
+    pan_pack_work_groups_compute(
+-      pan_section_ptr(job_desc->cpu, COMPUTE_JOB, INVOCATION), 1, 1, 1,
+-      copy_count, 1, 1, false, false);
++      pan_section_ptr(job_desc->cpu, COMPUTE_JOB, INVOCATION), wg_count, 1, 1,
++      wg_size, 1, 1, false, false);
+ 
+    pan_section_pack(job_desc->cpu, COMPUTE_JOB, PARAMETERS, cfg) {
+-      cfg.job_task_split = util_logbase2_ceil(copy_count + 1) +
++      cfg.job_task_split = util_logbase2_ceil(wg_size + 1) +
+                            util_logbase2_ceil(1 + 1) +
+                            util_logbase2_ceil(1 + 1);
+    }
+diff --git a/src/panfrost/vulkan/panvk_vX_physical_device.c b/src/panfrost/vulkan/panvk_vX_physical_device.c
+index 6e5dbe2..8da4fa2 100644
+--- a/src/panfrost/vulkan/panvk_vX_physical_device.c
++++ b/src/panfrost/vulkan/panvk_vX_physical_device.c
+@@ -430,7 +430,7 @@ panvk_per_arch(get_physical_device_features)(
+        * execution time (never on the CPU for an update-after-bind set, see
+        * copy_desc_on_cpu).
+        */
+-      .descriptorIndexing = PAN_ARCH >= 9,
++      .descriptorIndexing = true,
+       .shaderInputAttachmentArrayDynamicIndexing = true,
+       .shaderUniformTexelBufferArrayDynamicIndexing = true,
+       .shaderStorageTexelBufferArrayDynamicIndexing = true,
+@@ -441,12 +441,12 @@ panvk_per_arch(get_physical_device_features)(
+       .shaderInputAttachmentArrayNonUniformIndexing = true,
+       .shaderUniformTexelBufferArrayNonUniformIndexing = true,
+       .shaderStorageTexelBufferArrayNonUniformIndexing = true,
+-      .descriptorBindingUniformBufferUpdateAfterBind = PAN_ARCH >= 9,
++      .descriptorBindingUniformBufferUpdateAfterBind = true,
+       .descriptorBindingSampledImageUpdateAfterBind = true,
+-      .descriptorBindingStorageImageUpdateAfterBind = PAN_ARCH >= 9,
+-      .descriptorBindingStorageBufferUpdateAfterBind = PAN_ARCH >= 9,
+-      .descriptorBindingUniformTexelBufferUpdateAfterBind = PAN_ARCH >= 9,
+-      .descriptorBindingStorageTexelBufferUpdateAfterBind = PAN_ARCH >= 9,
++      .descriptorBindingStorageImageUpdateAfterBind = true,
++      .descriptorBindingStorageBufferUpdateAfterBind = true,
++      .descriptorBindingUniformTexelBufferUpdateAfterBind = true,
++      .descriptorBindingStorageTexelBufferUpdateAfterBind = true,
+       .descriptorBindingUpdateUnusedWhilePending = true,
+       .descriptorBindingPartiallyBound = true,
+       .descriptorBindingVariableDescriptorCount = true,
+@@ -1151,7 +1151,7 @@ panvk_per_arch(get_physical_device_properties)(
+       .shaderStorageBufferArrayNonUniformIndexingNative = false,
+       .shaderStorageImageArrayNonUniformIndexingNative = false,
+       .shaderInputAttachmentArrayNonUniformIndexingNative = false,
+-      .robustBufferAccessUpdateAfterBind = PAN_ARCH >= 9,
++      .robustBufferAccessUpdateAfterBind = true,
+       .quadDivergentImplicitLod = false,
+       .maxPerStageDescriptorUpdateAfterBindSamplers =
+          MAX_PER_STAGE_SAMPLERS,
+-- 
+2.43.0
+

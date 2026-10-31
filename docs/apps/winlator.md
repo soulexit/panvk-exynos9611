@@ -14,7 +14,7 @@ In the container (or the shortcut's own settings):
 | Sync frame | off | on, the wrapper waits for the GPU to go idle at every present |
 | Use DRI3 | on (default) | off, presents go through CPU copies with a full wait each |
 | Box64 preset | **Performance** | D3D9 AIO test: 12 FPS on Compatibility, 60+ on Performance (Box64's memory barriers, not the driver) |
-| DXVK | 1.10.3, 2.4.1, 2.7.1 gplasync tested by the sister project; 2.4.1 measured here | |
+| DXVK | 1.10.3, 2.4.1, 2.7.1 gplasync (0.07+) measured here | DXVK 2.5+ needs driver 0.07 or newer. arm64ec builds of DXVK/VKD3D need an ARM64EC container |
 
 Measuring FPS without the on-screen HUD: put `PANVK_FPS=1` in the container's environment
 variables and read `panvk fps:` lines from `adb logcat` (frames/s, submits/s, CPU wait time).
@@ -26,6 +26,9 @@ variables and read `panvk fps:` lines from `adb logcat` (frames/s, submits/s, CP
 | AIO main window, Direct3D 11 cube | ~250 |
 | `--cube dx11` (standalone window) | 460–610 |
 | `--cube dx9` (standalone window) | 620–700 |
+| `--cube dx11`, DXVK 2.7.1 gplasync (0.07) | 460–490 |
+| `--cube dx9`, DXVK 1.10.3 | 685–740 |
+| `--cube vk` | ~400 |
 
 ## Install
 

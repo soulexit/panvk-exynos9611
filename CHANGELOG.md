@@ -3,6 +3,20 @@
 Driver versions: `0.01`, `0.02`, … The archived app repositories numbered their packages
 separately (ARMSX2 0.05 wrapped driver 0.04); from 0.05 there is one number.
 
+## 0.07 (testing) — 2026-11-01
+
+**DXVK 2.5 and later work** (tested: DXVK 2.7.1 gplasync, Winlator x86-64 container).
+
+- **`descriptorIndexing` on Mali-G72** (0021). DXVK 2.5+ requires it and skipped the GPU
+  without it (the app fell back to OpenGL/Zink). Update-after-bind for every descriptor type;
+  the descriptor copy job now runs over several workgroups, so the large arrays descriptor
+  indexing allows no longer fault the GPU.
+- **Fixed: GPU faults with vertex pulling** (0020, from panvk-kirin990): indexed draws with no
+  vertex buffers bound (DXVK 2.7) kept a stale attribute table (JOB_READ_FAULT).
+- AIO D3D11 cube: DXVK 2.7.1 460–490 FPS (didn't start before), DXVK 2.4.1 550–560,
+  DXVK 1.10.3 660–670.
+- Known: CTS `descriptor_indexing.uniform_texel_buffer_after_bind_in_loop*` (2 cases) fail.
+
 ## 0.06 (testing) — 2026-11-01
 
 - **`PANVK_FPS=1`** (patch 0019): every 5 s the driver logs frames/s, submits/s and the CPU

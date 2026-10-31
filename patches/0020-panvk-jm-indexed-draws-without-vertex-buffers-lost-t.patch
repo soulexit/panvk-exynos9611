@@ -1,0 +1,70 @@
+From d4e15b89bfff932f3fb65ccb13224b8f3c021bed Mon Sep 17 00:00:00 2001
+From: soulexit <metehan.tanriverdi01@gmail.com>
+Date: Sun, 1 Nov 2026 01:26:45 +0300
+Subject: [PATCH 20/21] panvk/jm: indexed draws without vertex buffers lost
+ their attribute table
+
+Indexed and indirect draws allocate helper storage sized by the number of
+vertex buffers. With none bound (vertex pulling, as DXVK 2.7 does) the
+zero-sized allocation returns NULL, which was taken for a failure that the
+caller ignored: the draw kept a stale attribute table, and job chains
+faulted (JOB_READ_FAULT). Only fail when something was requested, and
+propagate the error. Ported from soulexit/panvk-kirin990 (edd369f).
+
+Assisted-by: LLM
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/panfrost/vulkan/jm/panvk_vX_cmd_draw.c | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/src/panfrost/vulkan/jm/panvk_vX_cmd_draw.c b/src/panfrost/vulkan/jm/panvk_vX_cmd_draw.c
+index b98f8e6..bcd7f26 100644
+--- a/src/panfrost/vulkan/jm/panvk_vX_cmd_draw.c
++++ b/src/panfrost/vulkan/jm/panvk_vX_cmd_draw.c
+@@ -963,7 +963,9 @@ panvk_draw_prepare_vs_attribs(struct panvk_cmd_buffer *cmdbuf,
+          cmdbuf, desc,
+          num_vs_attribs * sizeof(struct libpan_draw_helper_attrib_info), 8);
+ 
+-      if (!bufs_infos_storage.gpu ||
++      /* Zero-sized allocations return NULL: a VS without vertex buffers
++       * (vertex pulling, as DXVK 2.7 does) has no buffer infos. */
++      if ((num_vbs && !bufs_infos_storage.gpu) ||
+           (num_vs_attribs && !attribs_infos_storage.gpu))
+          return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+ 
+@@ -1026,16 +1028,19 @@ panvk_draw_prepare_vs_attribs(struct panvk_cmd_buffer *cmdbuf,
+    return VK_SUCCESS;
+ }
+ 
+-static void
++static VkResult
+ panvk_draw_prepare_attributes(struct panvk_cmd_buffer *cmdbuf,
+                               struct panvk_draw_data *draw)
+ {
+-   panvk_draw_prepare_vs_attribs(cmdbuf, draw);
++   VkResult result = panvk_draw_prepare_vs_attribs(cmdbuf, draw);
++   if (result != VK_SUCCESS)
++      return result;
+    draw->vs.attributes = cmdbuf->state.gfx.vs.attribs;
+    draw->vs.attribute_bufs = cmdbuf->state.gfx.vs.attrib_bufs;
+    draw->indirect_info.attribs = cmdbuf->state.gfx.vs.indirect_attribs_infos;
+    draw->indirect_info.attrib_bufs =
+       cmdbuf->state.gfx.vs.indirect_attrib_bufs_infos;
++   return VK_SUCCESS;
+ }
+ 
+ static void
+@@ -1695,7 +1700,9 @@ prepare_draw(struct panvk_cmd_buffer *cmdbuf, struct panvk_draw_data *draw)
+    /* This allocates and initializes the image table, which we need before we
+     * can copy descriptors.
+     */
+-   panvk_draw_prepare_attributes(cmdbuf, draw);
++   result = panvk_draw_prepare_attributes(cmdbuf, draw);
++   if (result != VK_SUCCESS)
++      return result;
+ 
+    if (gfx_state_dirty(cmdbuf, DESC_STATE) || gfx_state_dirty(cmdbuf, VS) ||
+        draw->vs_img_tables_new) {
+-- 
+2.43.0
+
