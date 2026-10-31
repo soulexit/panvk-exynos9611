@@ -1,32 +1,55 @@
-# PanVK for Exynos 9611 / Mali-G72 MP3 — Termux
+# panvk-exynos9611
 
-Experimental **Mesa PanVK** Vulkan driver for the **Samsung Galaxy A51 (SM-A515F, `a51`)** and other
-**Exynos 9611** devices with a **Mali-G72 MP3** GPU.
-
-The driver talks directly to the phone's stock **Arm `mali_kbase`** kernel driver through
-`/dev/mali0`. It does **not** need `/dev/dri`, a custom kernel, or a Panfrost DRM port. Root is only
-needed for optional log collection, not for using the driver.
-
-This repository is the **source of truth** for the Exynos 9611 port. It builds the driver, installs
-it in Termux, runs smoke tests, and publishes the binaries consumed by the Winlator and ARMSX2
-packaging repositories.
-
-| | |
-|---|---|
-| **Device** | Samsung Galaxy A51 4G (SM-A515F, `a51`) |
-| **SoC** | Samsung Exynos 9611 (`universal9611`) |
-| **GPU** | Mali-G72 MP3, r0p1, GPU info `0x6221` / Mesa arch **v6 (Bifrost, Job Manager)** |
-| **RAM** | 6 GB (5.4 GiB usable) |
-| **Android** | 16 / API 36 (`BP2A.250605.031.A2`, custom ROM) |
-| **Kernel** | Linux 4.14.364-openela (`SomethingNew`) |
-| **Kbase** | Arm DDK `r38p1-01bet0`, `/dev/mali0` mode `0666` |
-| **Display** | 1080 × 2400 |
-| **Status** | **v0.01 — bring-up / debug build. Not stable, not conformant.** |
+Mesa **PanVK** Vulkan driver for the **Samsung Galaxy A51 (SM-A515F, Exynos 9611, Mali-G72 MP3)**
+on the phone's stock **Arm `mali_kbase`** kernel driver (`/dev/mali0`): no root, no custom kernel,
+no `/dev/dri`. **One driver for every app** that loads AdrenoTools drivers — Winlator, Eden,
+ARMSX2 — and for Termux. Each release is one zip (plus the same driver named for ARMSX2).
 
 > [!WARNING]
-> This is a debug-quality driver built from a heavily modified Mesa tree. It can hang the GPU,
-> kill the app that loads it, or require a reboot. Keep a known-good driver installed, and do not
-> use it for anything you cannot lose.
+> **Testing build.** Experimental, non-conformant driver for one device family. It can hang the
+> GPU or kill the app that loads it. Keep a working driver installed as a fallback.
+
+This repository replaces three archived, read-only ones:
+[`panvk-exynos9611-kbase-termux`](https://github.com/soulexit/panvk-exynos9611-kbase-termux) (driver
+source, patches, CTS tooling — its history continues here),
+[`panvk-exynos9611-kbase-winlator`](https://github.com/soulexit/panvk-exynos9611-kbase-winlator) and
+[`panvk-exynos9611-kbase-armsx2`](https://github.com/soulexit/panvk-exynos9611-kbase-armsx2)
+(packages). Their releases stay downloadable; new releases come from here. The sister project for
+the Huawei P40 / Mali-G76 is [`panvk-kirin990`](https://github.com/soulexit/panvk-kirin990).
+
+## Download
+
+From [releases](https://github.com/soulexit/panvk-exynos9611/releases):
+
+| Zip | For |
+|---|---|
+| `panvk-g72-exynos9611-<version>.zip` | Winlator, Eden, other AdrenoTools apps, Termux |
+| `panvk-g72-exynos9611-<version>-armsx2.zip` | ARMSX2 (same driver, library named `libvulkan_freedreno.so`) |
+
+Changes per release: [CHANGELOG.md](CHANGELOG.md).
+
+## Install
+
+Install the zip as it is (don't unzip it) in the app's driver manager.
+
+| App | Where | Guide |
+|---|---|---|
+| **Winlator** (cmod 4.1) | Contents → AdrenoTools, then the container's Graphics Driver | [docs/apps/winlator.md](docs/apps/winlator.md) |
+| **Eden** (Switch) | Settings → GPU driver manager | [docs/apps/eden.md](docs/apps/eden.md) |
+| **ARMSX2** (PS2) | Settings → Renderer → GPU Driver → Import; use the `-armsx2` zip | [docs/apps/armsx2.md](docs/apps/armsx2.md) |
+| **Termux** | `unzip` the main zip, `bash install-termux.sh` | [docs/BUILD.md](docs/BUILD.md), [docs/TESTING.md](docs/TESTING.md) |
+
+Driver options (environment switches) go in a `panvk.env` file next to the driver:
+[docs/DEBUGGING.md](docs/DEBUGGING.md).
+
+## Games and tests
+
+| App | Game / test | Driver | Result |
+|---|---|---|---|
+| Eden | Zelda: Echoes of Wisdom (in-game) | 0.04 | 6.2–6.9 FPS, no GPU fault (0.03: 5.9–7.5) |
+| Winlator | NFS Most Wanted (DXVK D3D9) | 0.02 | intro/title/menus at 50–60 FPS |
+| ARMSX2 | Kingdom Hearts | 0.02 | at parity with 0.01 |
+| Termux | Khronos Vulkan CTS 1.4.7.1, 89,530 sampled cases | 0.04 | 33,218 pass, 100 fail, 0 driver crash ([docs/CTS-RESULTS.md](docs/CTS-RESULTS.md)) |
 
 ## Why this repository exists
 

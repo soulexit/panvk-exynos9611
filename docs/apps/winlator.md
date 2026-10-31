@@ -1,0 +1,101 @@
+# Winlator
+
+Use `panvk-g72-exynos9611-<version>.zip`. Tested with `com.winlator.cmod` 4.1.
+
+## Install
+
+### Option A — import the zip in Winlator (no root, recommended)
+
+1. Download `panvk-g72-exynos9611-<version>.zip` from
+   [Releases](https://github.com/soulexit/panvk-exynos9611/releases).
+2. Copy it to the phone (Downloads is fine).
+3. Open **Winlator → Contents → AdrenoTools** (the driver manager).
+4. Tap **Install / Import**, choose the zip, wait for it to appear under **Available Drivers**.
+5. Open the container → **Graphics / Vulkan** settings → select
+   **PanVK Exynos 9611 (Mali-G72 MP3)**.
+6. Start with `vkcube.exe` or a light D3D9 game. Do not start with a heavy D3D11 title.
+
+If Winlator shows an import error, check that the zip has `meta.json` and
+`libvulkan_panfrost.so` at the **root**, not inside a folder.
+
+### Option B — push with adb, then import
+
+```sh
+./scripts/install-adb.sh
+```
+
+This copies the zip to `/sdcard/Download/` and prints the import path. It does not silently modify
+Winlator's data directory.
+
+### Option C — direct install (root, advanced)
+
+```sh
+./scripts/install-adb.sh --root --yes
+```
+
+Requires a working `su` for the shell. The script copies the unpacked driver to:
+
+```text
+/data/data/com.winlator.cmod/files/contents/adrenotools/PanVK-Exynos9611-v0.04/
+```
+
+Force-stop Winlator before and after. Use this only when the in-app importer is unavailable; the
+normal import path is safer and survives app updates better.
+
+## Uninstall / revert
+
+- In Winlator, select **System Vulkan driver** in the container settings.
+- Delete the imported driver entry from the AdrenoTools list.
+- Root install: remove the folder under
+  `/data/data/com.winlator.cmod/files/contents/adrenotools/` and restart Winlator.
+
+The vendor Vulkan driver is never modified.
+
+## Test procedure
+
+1. Select the driver in the container.
+2. Run `vkcube.exe` first (DXVK D3D11, tiny workload).
+3. If that works, run a D3D9 game at 800×600 or 1280×720, not native 1080p.
+4. Capture:
+   - Winlator container settings (DXVK version, Box64/FEX, resolution, GPU driver);
+   - `adb logcat -d -s panvk:* Mesa:* AndroidRuntime:E > logcat.txt`;
+   - `adb shell dmesg | grep -iE 'mali|kbase|gpu|fault' > dmesg.txt`;
+   - a screenshot of the DXVK HUD if it is enabled.
+5. Fill in [`docs/TEST-RESULTS.md`](docs/TEST-RESULTS.md) or the report template.
+
+```sh
+./scripts/collect-logs.sh
+```
+
+## Known limitations
+
+- **Mali-G72 is Mesa v6 Bifrost**, the least-tested Bifrost path. The base tree validated G72 on a
+  Galaxy Tab S6 Lite (same SoC family); the A51's Android 16 + kbase r38 is a new combination.
+- **BCn is emulated by the driver** (v0.02+). If textures look wrong, set the container's BCn
+  emulation to the wrapper's, or put `PANVK_NO_BC_EMU=1` in `panvk.env` next to the driver.
+- **No D3D12 / vkd3d-proton.** The required Vulkan features are not there yet.
+- **GS/tessellation/XFB are compute-emulated.** On a 3-core G72 this is slow; expect D3D9 and light
+  D3D11 only.
+- **Shared memory.** On a 6 GB phone, Wine + DXVK + a game can exhaust RAM; close background apps.
+- **First frame / shader compilation** can take seconds; a black screen for a few seconds is not
+  necessarily a crash.
+- **Android 16 gralloc** may break swapchain presentation; offscreen tests can pass while the
+  window stays black.
+
+## Debugging
+
+| Switch | Effect |
+|---|---|
+| `PANVK_DEBUG=startup` | Device-creation diagnostics |
+| `PANVK_DEBUG=trace` | Verbose tracing |
+| `PANVK_FORCE_IDVS=1` | Re-enable index-driven vertex shading |
+| `MESA_LOG=stderr` | Send Mesa logs to stderr |
+
+Winlator does not give the driver a shell, so set these through the container's environment field if
+it exposes one, or use a debug build with the switch compiled in. Logs land in logcat under `panvk`
+and `Mesa`.
+
+See [`docs/DEBUGGING.md`](docs/DEBUGGING.md) for the failure classes that matter on this device:
+atom stride / `JOB_CONFIG_FAULT`, `VK_ERROR_DEVICE_LOST`, black swapchain, and app-side driver
+loading.
+
