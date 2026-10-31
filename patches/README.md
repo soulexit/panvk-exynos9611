@@ -232,3 +232,12 @@ Symptom:     DXVK 2.5+ skipped the GPU; with the feature, DATA_INVALID_FAULT on 
 Validation:  DXVK 2.7.1 AIO cube 460-490 FPS, 0 faults; CTS descriptor_indexing 2 known fails;
              1,500 binding_model + 400 smoke cases pass
 ```
+
+### 0022 — panvk.env lookup
+
+```text
+Purpose:     read panvk.env from the driver dir, its parent, /sdcard/Android/data/<pkg>/files or
+             /sdcard/Download with open()/read()
+Symptom:     options file never read in AdrenoTools apps (patched copy in temp/; ARMSX2 hooks fopen)
+Validation:  ARMSX2 Kingdom Hearts logs PANVK_FPS lines; CTS smoke 400/400
+```

@@ -1,5 +1,7 @@
 # ARMSX2
 
+Result (driver 0.08): Kingdom Hearts at full speed, 30.0 FPS, one submit per frame, no driver waits.
+
 Use `panvk-g72-exynos9611-<version>-armsx2.zip` (same driver; ARMSX2 requires the library to be named `libvulkan_freedreno.so`).
 
 ## Install

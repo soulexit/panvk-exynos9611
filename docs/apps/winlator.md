@@ -4,6 +4,15 @@ Use `panvk-g72-exynos9611-<version>.zip`. Tested with `com.winlator.cmod` 4.1.
 
 ## Recommended settings
 
+**Prefer an ARM64EC container** (Settings → Containers → +, Wine *Proton 9 arm64ec*) with the
+arm64ec builds of DXVK: Windows code then runs natively through FEX's ARM64EC mode instead of
+Box64. AIO Graphics Test on the A51: Vulkan cube 855–865 FPS vs ~400 in the x86-64 container,
+D3D11 cube ~650 FPS (DXVK 2.6.2 / 2.7.1 arm64ec) vs 470–560. In ARM64EC containers DXVK 3.1.1
+and 1.14.1 (arm64ec builds) crashed during their own start-up with Proton 9; use 2.6.2 or
+2.7.1.
+
+Settings for any container:
+
 In the container (or the shortcut's own settings):
 
 | Setting | Value | Why |
@@ -127,3 +136,8 @@ See [`docs/DEBUGGING.md`](docs/DEBUGGING.md) for the failure classes that matter
 atom stride / `JOB_CONFIG_FAULT`, `VK_ERROR_DEVICE_LOST`, black swapchain, and app-side driver
 loading.
 
+
+## D3D12 (VKD3D-Proton)
+
+Not working yet. VKD3D-Proton loads, but needs `VK_EXT_mutable_descriptor_type`,
+`robustImageAccess2` and transform-feedback queries, which this driver does not provide yet.

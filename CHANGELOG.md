@@ -3,6 +3,21 @@
 Driver versions: `0.01`, `0.02`, … The archived app repositories numbered their packages
 separately (ARMSX2 0.05 wrapped driver 0.04); from 0.05 there is one number.
 
+## 0.08 (testing) — 2026-11-01
+
+- **`panvk.env` works in every app** (0022). The driver now reads the first `panvk.env` found
+  in its own directory, the directory above it (AdrenoTools apps load a patched copy from a
+  `temp/` subdirectory, so the file next to it was never found), `/sdcard/Android/data/<app
+  package>/files/` or `/sdcard/Download/`, without `fopen()` (ARMSX2 redirects it).
+- **Winlator: use an ARM64EC container.** Measured on the A51 (AIO Graphics Test cubes):
+  Vulkan 855–865 FPS in a Proton 9 ARM64EC container vs ~400 in the x86-64 (Box64) one;
+  D3D11 with ARM64EC DXVK 2.6.2 / 2.7.1 ~650 FPS vs 470–560 with x86-64 DXVK. The arm64ec
+  DXVK 3.1.1 and 1.14.1 builds crash in their own start-up with Proton 9 (before reaching the
+  driver).
+- **ARMSX2:** Kingdom Hearts runs at full speed (30.0 FPS, 1 submit/frame, no driver waits).
+- **D3D12 status:** VKD3D-Proton loads but cannot create its device yet; missing
+  `VK_EXT_mutable_descriptor_type`, `robustImageAccess2` and transform-feedback queries.
+
 ## 0.07 (testing) — 2026-11-01
 
 **DXVK 2.5 and later work** (tested: DXVK 2.7.1 gplasync, Winlator x86-64 container).
